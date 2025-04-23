@@ -6,7 +6,29 @@
     <div class="action-buttons">
       <el-button type="primary" @click="showAddDialog">添加同学</el-button>
       <el-button type="success" @click="refreshData">刷新数据</el-button>
+      <el-button type="warning" @click="showImportDialog">批量导入</el-button>
     </div>
+    
+    <!-- 批量导入对话框 -->
+    <el-dialog
+      title="批量导入同学数据"
+      v-model="importDialogVisible"
+      width="600px"
+    >
+      <p class="import-tip">请粘贴表格数据（包含ID、姓名、纬度、经度、城市、国家）</p>
+      <el-input
+        type="textarea"
+        v-model="importData"
+        :rows="10"
+        placeholder="请粘贴表格数据，格式如：ID 姓名 纬度 经度 城市 国家"
+      ></el-input>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="importDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="importClassmates" :loading="importLoading">导入</el-button>
+        </span>
+      </template>
+    </el-dialog>
     
     <!-- 同学列表 -->
     <el-table :data="classmates" style="width: 100%" v-loading="loading">
@@ -78,6 +100,9 @@ export default {
       classmates: [],
       loading: false,
       dialogVisible: false,
+      importDialogVisible: false,
+      importData: '',
+      importLoading: false,
       isEdit: false,
       activeTab: 'basic',
       form: {
@@ -201,6 +226,87 @@ export default {
     },
     refreshData() {
       this.fetchClassmates()
+    },
+    showImportDialog() {
+      this.importDialogVisible = true
+      this.importData = ''
+    },
+    async importClassmates() {
+      if (!this.importData.trim()) {
+        ElMessage.warning('请先粘贴表格数据')
+        return
+      }
+      
+      try {
+        this.importLoading = true
+        
+        // 解析表格数据
+        const lines = this.importData.trim().split('\n')
+        const classmatesData = []
+        
+        // 跳过标题行（如果有）
+        const startIndex = lines[0].includes('ID') || lines[0].includes('姓名') ? 1 : 0
+        
+        for (let i = startIndex; i < lines.length; i++) {
+          const line = lines[i].trim()
+          if (!line) continue
+          
+          // 按制表符或多个空格分割
+          const parts = line.split(/\s+/)
+          if (parts.length < 6) {
+            ElMessage.warning(`第${i+1}行数据格式不正确，已跳过`)
+            continue
+          }
+          
+          // 解析数据
+          const id = parseInt(parts[0])
+          const name = parts[1]
+          const lat = parseFloat(parts[2])
+          const lng = parseFloat(parts[3])
+          const city = parts[4]
+          const country = parts[5]
+          
+          // 验证数据
+          if (isNaN(id) || isNaN(lat) || isNaN(lng)) {
+            ElMessage.warning(`第${i+1}行数据格式不正确，已跳过`)
+            continue
+          }
+          
+          classmatesData.push({
+            id,
+            name,
+            city,
+            country,
+            location: {
+              lat,
+              lng
+            }
+          })
+        }
+        
+        if (classmatesData.length === 0) {
+          ElMessage.warning('没有有效的数据可以导入')
+          return
+        }
+        
+        // 调用批量更新API
+        const result = await apiService.batchUpdateClassmates(classmatesData)
+        
+        // 显示结果
+        ElMessage.success(`导入成功！更新: ${result.updated}, 新增: ${result.created}, 错误: ${result.errors}`)
+        
+        // 关闭对话框并刷新数据
+        this.importDialogVisible = false
+        this.fetchClassmates()
+        
+        // 通知其他组件刷新数据
+        eventBus.emit('data-updated')
+      } catch (error) {
+        console.error('导入失败:', error)
+        ElMessage.error('导入失败: ' + (error.response?.data?.error || error.message))
+      } finally {
+        this.importLoading = false
+      }
     },
     async autoSearchLocation() {
       // 当城市或国家信息变化时，自动搜索位置
