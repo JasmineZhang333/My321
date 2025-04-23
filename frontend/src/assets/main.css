@@ -1,0 +1,56 @@
+/* 全局样式 */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* 地图样式 */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
+
+/* 标记样式 */
+.location-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background-color: rgba(255, 215, 0, 0.8);
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.location-marker:hover {
+  transform: scale(1.2);
+  background-color: gold;
+}
+
+/* 弹出窗口样式 */
+.location-popup {
+  min-width: 150px;
+}
+
+.location-popup h3 {
+  margin: 0 0 5px 0;
+  color: #333;
+}
+
+.location-popup p {
+  margin: 2px 0;
+  color: #666;
+}
+
+.classmates-list {
+  margin: 5px 0;
+  padding-left: 15px;
+}
+
+.classmates-list li {
+  margin: 2px 0;
+  color: #666;
+}
